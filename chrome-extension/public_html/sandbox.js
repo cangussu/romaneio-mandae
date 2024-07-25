@@ -1,11 +1,16 @@
 // alert('sandbox');
 // eval("alert('sandbox eval');");
 
+var googleLoaded = false;
+
 // Set up message event handler:
 window.addEventListener('message', function (event) {
     console.log('SANDBOX: it works, got message on the sandbox' + event.data);
-    // this.window.fetch('https://example.com');
-    loadGoogleApi();
+
+    if (!googleLoaded) {
+        loadGoogleApi();
+        googleLoaded = true;
+    }
 });
 
 function GISCallback() {
