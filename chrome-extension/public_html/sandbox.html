@@ -1,14 +1,20 @@
 <!doctype html>
+
 <script src="./sandbox.js"></script>
+<script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+<script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
+
 <!-- <script src="https://accounts.google.com/gsi/client" async></script> -->
 <body>
-  <div
+  <!--Add buttons to initiate auth sequence and sign out-->
+  <button id="authorize_button" onclick="handleAuthClick()">Authorize</button>
+  <button id="signout_button" onclick="handleSignoutClick()">Sign Out</button>
+
+  <!-- <div
     id="g_id_onload"
     data-client_id="382900821268-gqi3atgehj0eu77m2g3joht6adhc205k.apps.googleusercontent.com"
     data-context="use"
     data-callback="GISCallback"
     data-itp_support="true"
-  ></div>
+  ></div> -->
 </body>
-<!-- <script src="./gapi.js"></script> -->
-<!-- <script src="https://apis.google.com/js/client.js"></script> -->
