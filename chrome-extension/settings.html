@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Romaneio Mandae</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        min-width: 350px;
+        min-height: 400px;
+      }
+      .hidden {
+        display: none;
+      }
+      .active-tab {
+        background-color: #4f46e5; /* Indigo-600 */
+        color: white;
+      }
+      .inactive-tab {
+        background-color: #e5e7eb; /* Gray-300 */
+        color: black;
+      }
+      .tab-content {
+        min-height: 350px;
+      }
+    </style>
+    <script defer src="settings.js"></script>
+  </head>
+  <body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <div class="bg-white p-8 rounded shadow-md w-full max-w-md min-w-[300px]">
+      <h1 class="text-2xl font-bold mb-6 text-center">Romaneio Mandae</h1>
+      <div class="mb-4">
+        <button
+          id="actionsTab"
+          class="px-4 py-2 bg-indigo-600 text-white rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+        >
+          Actions
+        </button>
+        <button
+          id="settingsTab"
+          class="px-4 py-2 bg-gray-300 text-black rounded-md shadow-sm hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+        >
+          Settings
+        </button>
+      </div>
+      <div id="actions" class="tab-content">
+        <div class="space-y-4">
+          <button
+            id="start"
+            class="action-button w-full px-4 py-2 bg-green-600 text-white rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+          >
+            Gerar romaneio
+          </button>
+          <!-- <button
+            id="action2"
+            class="action-button w-full px-4 py-2 bg-blue-600 text-white rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            Action 2
+          </button>
+          <button
+            id="action3"
+            class="action-button w-full px-4 py-2 bg-red-600 text-white rounded-md shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+          >
+            Action 3
+          </button> -->
+        </div>
+      </div>
+      <div id="settings" class="tab-content hidden">
+        <form id="configForm" class="space-y-4">
+          <div>
+            <label
+              for="clientId"
+              class="block text-sm font-medium text-gray-700"
+              >Client ID:</label
+            >
+            <input
+              type="text"
+              id="clientId"
+              name="clientId"
+              value="382900821268-gqi3atgehj0eu77m2g3joht6adhc205k.apps.googleusercontent.com"
+              class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            />
+          </div>
+          <div>
+            <label for="apiKey" class="block text-sm font-medium text-gray-700"
+              >API Key:</label
+            >
+            <input
+              type="text"
+              id="apiKey"
+              name="apiKey"
+              value="AIzaSyBfIUgoUmRdBFZ26Daeaz2Z6mh0Vc6jBKM"
+              class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            />
+          </div>
+          <div>
+            <label
+              for="spreadsheetId"
+              class="block text-sm font-medium text-gray-700"
+              >Spreadsheet ID:</label
+            >
+            <input
+              type="text"
+              id="spreadsheetId"
+              name="spreadsheetId"
+              value="1CCry2AIpjy079BCq2xsgmlp81SJHsixfOf8otsSeuSE"
+              class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            />
+          </div>
+          <div class="text-center">
+            <button
+              type="button"
+              class="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              Save Configuration
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </body>
+</html>

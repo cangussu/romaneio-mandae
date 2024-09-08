@@ -1,12 +1,14 @@
 var authTriggered = false;
 
-// Set up message event handler:
-window.addEventListener('message', function (event) {
-    console.log('SANDBOX: it works, got message on the sandbox' + event.data);
 
-    if (!authTriggered) {
-        // handleAuthClick();
-        authTriggered = true;
+// Set up message event handler:
+window.addEventListener('message', async function (event) {
+    console.debug(event);
+
+    if (event.data.action === 'process-os') {
+        console.log('Processing OS:', event.data.payload.numero);
+        var result = await handleAuthClick(event.data.payload.remessas);
+        event.source.postMessage({ result: result }, event.origin);
     }
 });
 
@@ -17,16 +19,15 @@ window.addEventListener('message', function (event) {
 /* exported handleAuthClick */
 /* exported handleSignoutClick */
 
-// TODO(developer): Set to client ID and API key from the Developer Console
+const SPREADSHEET_ID = '1CCry2AIpjy079BCq2xsgmlp81SJHsixfOf8otsSeuSE';
 const CLIENT_ID = '382900821268-gqi3atgehj0eu77m2g3joht6adhc205k.apps.googleusercontent.com';
-const API_KEY = 'AIzaSyAqsv8Fnk176nC0DFefNI3Sb9816j1wGvk';
+const API_KEY = 'AIzaSyBfIUgoUmRdBFZ26Daeaz2Z6mh0Vc6jBKM';
 
 // Discovery doc URL for APIs used by the quickstart
 const DISCOVERY_DOC = 'https://sheets.googleapis.com/$discovery/rest?version=v4';
 
-// Authorization scopes required by the API; multiple scopes can be
-// included, separated by spaces.
-const SCOPES = 'https://www.googleapis.com/auth/spreadsheets.readonly';
+// Google Sheets API authorization scope.
+const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
 
 let tokenClient;
 let gapiInited = false;
@@ -39,6 +40,7 @@ document.getElementById('signout_button').style.visibility = 'hidden';
  * Callback after api.js is loaded.
  */
 function gapiLoaded() {
+    console.log("gapiLoaded");
     gapi.load('client', initializeGapiClient);
 }
 
@@ -59,6 +61,7 @@ async function initializeGapiClient() {
  * Callback after Google Identity Services are loaded.
  */
 function gisLoaded() {
+    console.log("gisLoaded");
     tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope: SCOPES,
@@ -80,23 +83,34 @@ function maybeEnableButtons() {
 /**
  *  Sign in the user upon button click.
  */
-function handleAuthClick() {
+async function handleAuthClick(remessas) {
     tokenClient.callback = async (resp) => {
         if (resp.error !== undefined) {
             throw (resp);
         }
         document.getElementById('signout_button').style.visibility = 'visible';
         document.getElementById('authorize_button').innerText = 'Refresh';
-        await listMajors();
+
+        await resetRange(SPREADSHEET_ID, 'identificadores');
+        await resetRange(SPREADSHEET_ID, 'nomes');
+        await resetRange(SPREADSHEET_ID, 'quantidade');
+
+        var rastreios = remessas.map(remessa => remessa.id);
+        var nomes = remessas.map(remessa => remessa.destinatario.nome);
+        var quantidades = remessas.map(remessa => 1);
+
+        await updateRange(SPREADSHEET_ID, 'identificadores', rastreios);
+        await updateRange(SPREADSHEET_ID, 'nomes', nomes);
+        await updateRange(SPREADSHEET_ID, 'quantidade', quantidades);
     };
 
     if (gapi.client.getToken() === null) {
         // Prompt the user to select a Google Account and ask for consent to share their data
         // when establishing a new session.
-        tokenClient.requestAccessToken({ prompt: 'consent' });
+        return tokenClient.requestAccessToken({ prompt: 'consent' });
     } else {
         // Skip display of account chooser and consent dialog for an existing session.
-        tokenClient.requestAccessToken({ prompt: '' });
+        return tokenClient.requestAccessToken({ prompt: '' });
     }
 }
 
@@ -114,30 +128,24 @@ function handleSignoutClick() {
     }
 }
 
-/**
- * Print the names and majors of students in a sample spreadsheet:
- * https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit
- */
-async function listMajors() {
-    let response;
-    try {
-        // Fetch first 10 files
-        response = await gapi.client.sheets.spreadsheets.values.get({
-            spreadsheetId: '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms',
-            range: 'Class Data!A2:E',
-        });
-    } catch (err) {
-        console.error(err.message);
-        return;
-    }
-    const range = response.result;
-    if (!range || !range.values || range.values.length == 0) {
-        console.error('No values found.');
-        return;
-    }
-    // Flatten to string to display
-    const output = range.values.reduce(
-        (str, row) => `${str}${row[0]}, ${row[4]}\n`,
-        'Name, Major:\n');
-    console.log(output);
+// Function to update a spreadsheet range.
+function updateRange(spreadsheetId, range, values) {
+    return gapi.client.sheets.spreadsheets.values.update({
+        spreadsheetId: spreadsheetId,
+        valueInputOption: 'RAW',
+        range,
+        values: values.map(v => [v]),
+    }).then(response => console.log(`Range ${range} updated.`))
+        .catch(error => console.error("Error updating range:", error));
 }
+
+
+// Function to reset a spreadsheet range (clear it)
+function resetRange(spreadsheetId, range) {
+    return gapi.client.sheets.spreadsheets.values.clear({
+        spreadsheetId: spreadsheetId,
+        range: range,
+    }).then(response => console.log(`Range ${range} cleared.`))
+        .catch(error => console.error("Error clearing range:", error));
+}
+

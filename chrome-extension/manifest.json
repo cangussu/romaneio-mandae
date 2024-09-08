@@ -1,0 +1,30 @@
+{
+  "name": "Romaneio Mandae",
+  "version": "0.1",
+  "manifest_version": 3,
+  "description": "Atualiza o romaneio para uma orde de serviço (OS).",
+  "background": {
+    "service_worker": "sw.js"
+  },
+  "permissions": [
+    "identity",
+    "scripting",
+    "webNavigation",
+    "storage",
+    "activeTab",
+    "tabs",
+    "offscreen"
+  ],
+  "host_permissions": [
+    "https://example.com/*",
+    "https://apis.google.com/*",
+    "https://www.googleapis.com/*",
+    "https://app.mandae.com.br/*"
+  ],
+  "icons": {
+    "128": "images/default-icon.png"
+  },
+  "action": {
+    "default_popup": "settings.html"
+  }
+}
