@@ -7,15 +7,6 @@ var baseUrls = [
   'https://app.mandae.com.br/pedido/detalhe'
 ];
 
-const moduleBlock = {
-};
-
-moduleBlock.isReadyPromise = new Promise(resolve => {
-  moduleBlock.isReadyResolve = resolve;
-});
-
-export default moduleBlock;
-
 async function main() {
   // Register handlers
   chrome.runtime.onMessage.addListener(onMessage);
@@ -81,10 +72,14 @@ async function onMessage(message, sender, sendResponse) {
       break;
     default:
       console.log(`Unexpected message action received: '${message.action}'.`);
-      sendResponse({ value: 'cloud not process your message' });
       return false;
   }
-  sendResponse({ value: 'message processed' });
+
+  try {
+    sendResponse({ value: 'message processed' });
+  } catch (error) {
+    console.error('Error sending response:', error);
+  }
 }
 
 async function onDOMContentLoaded({ tabId, url }) {
@@ -131,11 +126,7 @@ async function injectContentScript(tabId, tabUrl) {
   }
   
   const wasInjected = getTabData(tabId, INJECT_ONLY_ONCE_KEY);
-  
-  if (wasInjected) {
-    return true;
-  }
-  
+
   console.log('SW: Injecting content script for Tab ID: ', tabId);
   const rv = await chrome.scripting.executeScript({
     target: { tabId: tabId },
