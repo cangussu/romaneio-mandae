@@ -1,4 +1,6 @@
 (function () {
+
+  // make sure the event listener is not added multiple times
   if (chrome.runtime.onMessage.hasListeners()) {
     return;
   }
