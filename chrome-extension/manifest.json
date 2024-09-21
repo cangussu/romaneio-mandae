@@ -4,7 +4,8 @@
   "manifest_version": 3,
   "description": "Atualiza o romaneio para uma orde de serviço (OS).",
   "background": {
-    "service_worker": "sw.js"
+    "service_worker": "sw.js",
+    "type": "module"
   },
   "permissions": [
     "identity",
@@ -26,5 +27,6 @@
   },
   "action": {
     "default_popup": "settings.html"
-  }
+  },
+  "options_page": "settings.html"
 }

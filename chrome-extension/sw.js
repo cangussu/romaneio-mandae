@@ -1,35 +1,20 @@
+import { setTabData, INJECT_ONLY_ONCE_KEY, getTabData } from './lib.js';
+
+var onlyOnce = false;
+
 var baseUrls = [
   'https://example.com',
   'https://app.mandae.com.br/pedido/detalhe'
 ];
 
-// ---------------------------------------------------------------------------
-// State manager
+const moduleBlock = {
+};
 
-var onlyOnce = false;
+moduleBlock.isReadyPromise = new Promise(resolve => {
+  moduleBlock.isReadyResolve = resolve;
+});
 
-// Define constants
-const INJECT_ONLY_ONCE_KEY = 'injectOnlyOnce';
-
-// Data structure to store variables per tab
-var tabData = {};
-
-// Function to set variables for a specific tab ID
-function setTabData(tabId, key, data) {
-  (tabData[tabId] = tabData[tabId] || {})[key] = data;
-}
-
-// Function to get variables for a specific tab ID
-function getTabData(tabId, key) {
-  return (tabData[tabId] || {})[key] || null;
-}
-
-// Function to delete variables for a specific tab ID
-function deleteTabData(tabId) {
-  delete tabData[tabId];
-}
-
-// ---------------------------------------------------------------------------
+export default moduleBlock;
 
 async function main() {
   // Register handlers
@@ -60,10 +45,8 @@ function genericOnClick(info) {
 }
 
 async function createExtensionTab() {
-  const { options } = await chrome.storage.local.get('options');
   const rv = await chrome.tabs.create({
     url: 'settings.html',
-    ...options
   });
 }
 
@@ -75,18 +58,26 @@ async function onMessage(message, sender, sendResponse) {
   switch (message.action) {
     case 'process-os':
       console.log('Processing OS:', message.payload.numero);
+      const cb = await chrome.storage.local.get(['config']);
       chrome.runtime.sendMessage({
         target: 'offscreen',
         action: message.action,
-        payload: message.payload
+        payload: message.payload,
+        config: cb.config
       });
       break;
     case 'start':
       const [tab] = await chrome.tabs.query({ active: true });
-      await injectContentScript(tab.id, tab.url);
-      chrome.runtime.sendMessage('message to popup XXXXXXXXXXXXXXXX', function (response) {
-        console.log('Response from popup:', response);
-      });
+      const injected = await injectContentScript(tab.id, tab.url);
+      if (injected) {
+        chrome.tabs.sendMessage(tab.id, { action: 'process-os' });
+      } else {
+        console.log('Content script not injected.');
+      }
+      break;
+    case 'saveConfig':
+      console.log('Saving config:', message.config);
+      chrome.storage.local.set({ config: message.config });
       break;
     default:
       console.log(`Unexpected message action received: '${message.action}'.`);
@@ -97,14 +88,13 @@ async function onMessage(message, sender, sendResponse) {
 }
 
 async function onDOMContentLoaded({ tabId, url }) {
-  console.log('SW: onDOMContentLoaded for Tab ID: ', tabId);
-  console.log('SW: onDOMContentLoaded for URL: ', url);
-  const canInject = baseUrls.some(baseUrl => url.startsWith(baseUrl));
-  if (!canInject) {
-    console.log('Aborting for URL: ', url);
-    return;
-  }
-
+  // console.log('SW: onDOMContentLoaded for Tab ID: ', tabId);
+  // console.log('SW: onDOMContentLoaded for URL: ', url);
+  // const canInject = baseUrls.some(baseUrl => url.startsWith(baseUrl));
+  // if (!canInject) {
+  //   console.log('Aborting for URL: ', url);
+  //   return;
+  // }
 }
 
 async function onClicked(event) {
@@ -125,7 +115,6 @@ async function createOffscreen() {
     return chrome.runtime.sendMessage({
       target: 'offscreen',
       name: 'message',
-      options: {}
     });
   }
 }
@@ -133,38 +122,32 @@ async function createOffscreen() {
 async function injectContentScript(tabId, tabUrl) {
   if (!tabId || !tabUrl) {
     console.log(`Invalid tabId or tabUrl: ${tabId}, ${tabUrl}`);
-    return;
+    return false;
   }
-
-  if (getTabData(tabId, INJECT_ONLY_ONCE_KEY)) {
-    console.log('Content script already injected.');
-    // Send a message to the content script so it can process the OS
-    chrome.tabs.sendMessage(tabId, { action: 'process-os' });
-    return;
-  }
-
-  console.log('Injecting content script for URL: ', tabUrl);
 
   const canInject = baseUrls.some(baseUrl => tabUrl.startsWith(baseUrl));
   if (!canInject) {
-    console.log('SW: Aborting content injection for URL: ', tabUrl);
-    return;
+    return false;
   }
-
-  const { options } = await chrome.storage.local.get('options');
+  
+  const wasInjected = getTabData(tabId, INJECT_ONLY_ONCE_KEY);
+  
+  if (wasInjected) {
+    return true;
+  }
+  
+  console.log('SW: Injecting content script for Tab ID: ', tabId);
   const rv = await chrome.scripting.executeScript({
     target: { tabId: tabId },
     files: ['content-script.js'],
-    ...options
   });
   const csId = rv[0].documentId;
   setTabData(tabId, 'csId', csId);
   setTabData(tabId, INJECT_ONLY_ONCE_KEY, true);
-
-  chrome.tabs.sendMessage(tabId, { action: 'process-os' });
+  return true;
 }
 
-async function setProgress(status) {
+async function setProgress(action) {
   const statusIcons = {
     "idle": "./images/default-icon.png",
     "start": "./images/progress-1.png",
@@ -174,13 +157,12 @@ async function setProgress(status) {
     "error": "./images/error.png"
   };
 
-  if (!statusIcons[status]) {
-    console.info(`Invalid status: ${status}`);
+  if (!statusIcons[action]) {
     return;
   }
 
   chrome.action.setIcon({
-    path: statusIcons[status]
+    path: statusIcons[action]
   });
 }
 

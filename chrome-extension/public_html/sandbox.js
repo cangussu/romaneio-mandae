@@ -1,28 +1,3 @@
-var authTriggered = false;
-
-
-// Set up message event handler:
-window.addEventListener('message', async function (event) {
-    console.debug(event);
-
-    if (event.data.action === 'process-os') {
-        console.log('Processing OS:', event.data.payload.numero);
-        var result = await handleAuthClick(event.data.payload.remessas);
-        event.source.postMessage({ result: result }, event.origin);
-    }
-});
-
-// ----------------------------------------------------------------------------
-
-/* exported gapiLoaded */
-/* exported gisLoaded */
-/* exported handleAuthClick */
-/* exported handleSignoutClick */
-
-const SPREADSHEET_ID = '1CCry2AIpjy079BCq2xsgmlp81SJHsixfOf8otsSeuSE';
-const CLIENT_ID = '382900821268-gqi3atgehj0eu77m2g3joht6adhc205k.apps.googleusercontent.com';
-const API_KEY = 'AIzaSyBfIUgoUmRdBFZ26Daeaz2Z6mh0Vc6jBKM';
-
 // Discovery doc URL for APIs used by the quickstart
 const DISCOVERY_DOC = 'https://sheets.googleapis.com/$discovery/rest?version=v4';
 
@@ -30,81 +5,74 @@ const DISCOVERY_DOC = 'https://sheets.googleapis.com/$discovery/rest?version=v4'
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
 
 let tokenClient;
-let gapiInited = false;
-let gisInited = false;
+let gapiLoaded = false;
+let gisLoaded = false;
 
-document.getElementById('authorize_button').style.visibility = 'hidden';
-document.getElementById('signout_button').style.visibility = 'hidden';
+// Set up message event handler:
+window.addEventListener('message', async function (event) {
+    console.debug(event);
+
+    if (event.data.action === 'process-os') {
+        console.log('Processing OS:', event.data.payload.numero);
+        var result = await startAuth(event.data.config, event.data.payload.remessas);
+        event.source.postMessage({ result: result }, event.origin);
+    }
+});
+
+// -----------------------------------------------------------------------------
+// Functions
+// -----------------------------------------------------------------------------
 
 /**
  * Callback after api.js is loaded.
  */
-function gapiLoaded() {
+function onGapiLoaded() {
     console.log("gapiLoaded");
-    gapi.load('client', initializeGapiClient);
-}
-
-/**
- * Callback after the API client is loaded. Loads the
- * discovery doc to initialize the API.
- */
-async function initializeGapiClient() {
-    await gapi.client.init({
-        apiKey: API_KEY,
-        discoveryDocs: [DISCOVERY_DOC],
-    });
-    gapiInited = true;
-    maybeEnableButtons();
+    gapiLoaded = true;
 }
 
 /**
  * Callback after Google Identity Services are loaded.
  */
-function gisLoaded() {
+function onGisLoaded() {
     console.log("gisLoaded");
-    tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: CLIENT_ID,
-        scope: SCOPES,
-        callback: '', // defined later
-    });
-    gisInited = true;
-    maybeEnableButtons();
+    gisLoaded = true;
 }
 
 /**
- * Enables user interaction after all libraries are loaded.
+ *  Sign in the user.
  */
-function maybeEnableButtons() {
-    if (gapiInited && gisInited) {
-        document.getElementById('authorize_button').style.visibility = 'visible';
+async function startAuth(config, remessas) {
+    if (!gisLoaded) {
+        console.error("Google Identity Services not loaded.");
+        return;
     }
-}
+    if (!gapiLoaded) {
+        console.error("Google API not loaded.");
+        return;
+    }
 
-/**
- *  Sign in the user upon button click.
- */
-async function handleAuthClick(remessas) {
-    tokenClient.callback = async (resp) => {
-        if (resp.error !== undefined) {
-            throw (resp);
+
+    tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: config.clientId,
+        scope: SCOPES,
+        callback: async (resp) => {
+            if (resp.error !== undefined) {
+                throw (resp);
+            }
+
+            await gapi.load('client', async () => {
+                await gapi.client.init({
+                    apiKey: config.apiKey,
+                    discoveryDocs: [DISCOVERY_DOC],
+                });
+                gapi.client.setToken(resp);
+                updateSheet(config.spreadsheetId, remessas);
+            });
         }
-        document.getElementById('signout_button').style.visibility = 'visible';
-        document.getElementById('authorize_button').innerText = 'Refresh';
+    });
 
-        await resetRange(SPREADSHEET_ID, 'identificadores');
-        await resetRange(SPREADSHEET_ID, 'nomes');
-        await resetRange(SPREADSHEET_ID, 'quantidade');
-
-        var rastreios = remessas.map(remessa => remessa.id);
-        var nomes = remessas.map(remessa => remessa.destinatario.nome);
-        var quantidades = remessas.map(remessa => 1);
-
-        await updateRange(SPREADSHEET_ID, 'identificadores', rastreios);
-        await updateRange(SPREADSHEET_ID, 'nomes', nomes);
-        await updateRange(SPREADSHEET_ID, 'quantidade', quantidades);
-    };
-
-    if (gapi.client.getToken() === null) {
+    if (!gapi.client || gapi.client.getToken() === null) {
         // Prompt the user to select a Google Account and ask for consent to share their data
         // when establishing a new session.
         return tokenClient.requestAccessToken({ prompt: 'consent' });
@@ -112,20 +80,24 @@ async function handleAuthClick(remessas) {
         // Skip display of account chooser and consent dialog for an existing session.
         return tokenClient.requestAccessToken({ prompt: '' });
     }
+
+
 }
 
-/**
- *  Sign out the user upon button click.
- */
-function handleSignoutClick() {
-    const token = gapi.client.getToken();
-    if (token !== null) {
-        google.accounts.oauth2.revoke(token.access_token);
-        gapi.client.setToken('');
-        document.getElementById('content').innerText = '';
-        document.getElementById('authorize_button').innerText = 'Authorize';
-        document.getElementById('signout_button').style.visibility = 'hidden';
-    }
+// Google Sheets API functions
+
+async function updateSheet(spreadsheetId, remessas) {
+    await resetRange(spreadsheetId, 'identificadores');
+    await resetRange(spreadsheetId, 'nomes');
+    await resetRange(spreadsheetId, 'quantidade');
+
+    var rastreios = remessas.map(remessa => remessa.id);
+    var nomes = remessas.map(remessa => remessa.destinatario.nome);
+    var quantidades = remessas.map(remessa => 1);
+
+    await updateRange(spreadsheetId, 'identificadores', rastreios);
+    await updateRange(spreadsheetId, 'nomes', nomes);
+    await updateRange(spreadsheetId, 'quantidade', quantidades);
 }
 
 // Function to update a spreadsheet range.
