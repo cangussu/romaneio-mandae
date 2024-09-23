@@ -81,19 +81,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
 });
 
 document.addEventListener("DOMContentLoaded", function () {
-  const settingsTab = document.getElementById("settingsTab");
-  const actionsTab = document.getElementById("actionsTab");
   const actionButtons = document.querySelectorAll(".action-button");
-
-  settingsTab.addEventListener("click", function () {
-    showTab("settings");
-    setActiveTab(settingsTab, actionsTab);
-  });
-
-  actionsTab.addEventListener("click", function () {
-    showTab("actions");
-    setActiveTab(actionsTab, settingsTab);
-  });
 
   actionButtons.forEach((button) => {
     button.addEventListener("click", function () {

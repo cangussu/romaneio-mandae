@@ -18,12 +18,25 @@ async function main() {
 }
 
 async function onDOMContentLoaded({ tabId, url }) {}
-async function onClicked(event) {}
+
+async function onClicked(event) {
+  await start();
+}
 
 async function createExtensionTab() {
   const rv = await chrome.tabs.create({
     url: "settings.html",
   });
+}
+
+async function start() {
+  const [tab] = await chrome.tabs.query({ active: true });
+  const injected = await injectContentScript(tab.id, tab.url);
+  if (injected) {
+    chrome.tabs.sendMessage(tab.id, { action: "process-os" });
+  } else {
+    console.log("Content script not injected.");
+  }
 }
 
 async function onMessage(message, sender, sendResponse) {
@@ -41,15 +54,6 @@ async function onMessage(message, sender, sendResponse) {
         payload: message.payload,
         config: cb.config,
       });
-      break;
-    case "start":
-      const [tab] = await chrome.tabs.query({ active: true });
-      const injected = await injectContentScript(tab.id, tab.url);
-      if (injected) {
-        chrome.tabs.sendMessage(tab.id, { action: "process-os" });
-      } else {
-        console.log("Content script not injected.");
-      }
       break;
     case "saveConfig":
       console.log("Saving config:", message.config);
@@ -126,11 +130,26 @@ async function setProgress(action) {
   });
 
   if (action === "finished") {
+    await openSheet();
     setTimeout(() => {
       chrome.action.setIcon({
         path: statusIcons["idle"],
       });
     }, 5000);
+  }
+}
+
+
+async function openSheet() {
+  const cb = await chrome.storage.local.get(["config"]);
+  const config = cb.config;
+  const url = `https://docs.google.com/spreadsheets/d/${config.spreadsheetId}`;
+  const [tab] = await chrome.tabs.query({ url: `${url}/*` });
+
+  if (tab) {
+    return chrome.tabs.update(tab.id, { active: true });
+  } else {
+    return chrome.tabs.create({ url });
   }
 }
 
