@@ -20,7 +20,7 @@ async function main() {
 async function onDOMContentLoaded({ tabId, url }) {}
 
 async function onClicked(event) {
-  await start();
+  await start(event);
 }
 
 async function createExtensionTab() {
@@ -29,11 +29,12 @@ async function createExtensionTab() {
   });
 }
 
-async function start() {
-  const [tab] = await chrome.tabs.query({ active: true });
-  const injected = await injectContentScript(tab.id, tab.url);
+async function start(event) {
+  const tabId = event.id;
+  const tabUrl = event.url;
+  const injected = await injectContentScript(tabId, tabUrl);
   if (injected) {
-    chrome.tabs.sendMessage(tab.id, { action: "process-os" });
+    chrome.tabs.sendMessage(tabId, { action: "process-os" });
   } else {
     console.log("Content script not injected.");
   }
